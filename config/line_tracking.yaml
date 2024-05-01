@@ -1,0 +1,13 @@
+line_tracker:
+  ros__parameters:
+    x_min: 33
+    x_max: 67
+    y_min: 50
+    y_max: 100
+
+    low_h: 0
+    high_h: 50
+    low_s: 0
+    high_s: 45
+    low_v: 0
+    high_v: 45
