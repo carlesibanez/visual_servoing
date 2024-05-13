@@ -1,9 +1,12 @@
 line_tracker:
   ros__parameters:
-    x_min: 33
-    x_max: 67
-    y_min: 50
-    y_max: 100
+    img_width: 640
+    img_height: 480
+
+    x_min: 211
+    x_max: 429
+    y_min: 240
+    y_max: 480
 
     low_h: 0
     high_h: 50

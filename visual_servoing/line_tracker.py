@@ -4,7 +4,7 @@ from sensor_msgs.msg        import Image
 from geometry_msgs.msg      import Point, Twist
 from cv_bridge              import CvBridge, CvBridgeError
 import visual_servoing.tuning_window as tw
-from visual_servoing.process_image import apply_tuning
+from visual_servoing.process_image import apply_tuning, generate_visualization
 import cv2
 
 
@@ -20,7 +20,10 @@ class LineTracker(Node):
 
 
         # Declare parameters
-        self.declare_parameter('tuning_mode', True)
+        self.declare_parameter('tuning_mode', False)
+
+        self.declare_parameter("img_width",640)
+        self.declare_parameter("img_height",480)
 
         self.declare_parameter("x_min",0)
         self.declare_parameter("x_max",100)
@@ -40,6 +43,8 @@ class LineTracker(Node):
         self.tuning_mode = self.get_parameter('tuning_mode').get_parameter_value().bool_value
         self.window_name = 'Tuning Window'
         self.tuning_params = {
+            'img_width': self.get_parameter('img_width').get_parameter_value().integer_value,
+            'img_height': self.get_parameter('img_height').get_parameter_value().integer_value,
             'x_min': self.get_parameter('x_min').get_parameter_value().integer_value,
             'x_max': self.get_parameter('x_max').get_parameter_value().integer_value,
             'y_min': self.get_parameter('y_min').get_parameter_value().integer_value,
@@ -52,7 +57,8 @@ class LineTracker(Node):
             'high_v': self.get_parameter('high_v').get_parameter_value().integer_value,
         }
 
-        self.active_window = [self.tuning_params['x_min'], self.tuning_params['y_min'], self.tuning_params['x_max'], self.tuning_params['y_max']]
+        self.active_window = [self.tuning_params['x_min'], self.tuning_params['y_min'], 
+                              self.tuning_params['x_max'], self.tuning_params['y_max']]
 
         self.bridge = CvBridge()
 
@@ -71,11 +77,11 @@ class LineTracker(Node):
         # If using the tuning mode, get the updated tuning parameters
         if self.tuning_mode:
             self.tuning_params = tw.get_tuning_params(self.tuning_params, self.window_name)
-            self.active_window = self.convert_rect_perc_to_pixels([self.tuning_params['x_min'], self.tuning_params['y_min'], 
-                                  self.tuning_params['x_max'], self.tuning_params['y_max']], cv_image)
+            self.active_window = [self.tuning_params['x_min'], self.tuning_params['y_min'], 
+                                  self.tuning_params['x_max'], self.tuning_params['y_max']]
             
         # Apply the tuning parameters to the image (preprocessing)
-        img_out = apply_tuning(cv_image, self.tuning_params)
+        img_out = apply_tuning(cv_image, self.tuning_params, self.active_window)
 
         # Find the contours of the line
         conours, hier = cv2.findContours(img_out.copy(), cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
@@ -91,9 +97,11 @@ class LineTracker(Node):
                 center = (cx+self.active_window[0], cy+self.active_window[1])
 
 
+        img_processed = generate_visualization(cv_image, img_out, self.active_window, center, self.tuning_params)
+        
         # If tuning mode is enabled, display the tuning window
         if self.tuning_mode:
-            img_processed = tw.visualize_results(cv_image, img_out, self.active_window, center, self.tuning_params, self.window_name)
+            cv2.imshow(self.window_name, img_processed)
 
         # Publish the image with the line drawn on it
         try:
